@@ -48,7 +48,7 @@ public class S3Service {
 
         s3Client.putObject(putObjectRequest, RequestBody.fromBytes(updatedData.getBytes(StandardCharsets.UTF_8)));
     }
-
+//retrieving the data
     public String retrieveEventData(String eventType) throws Exception {
         String bucketName = "githubbucketgrafana";
         String prefix = "github-events/" + eventType + "/";
@@ -57,7 +57,7 @@ public class S3Service {
                 .bucket(bucketName)
                 .prefix(prefix)
                 .build();
-
+        
         ListObjectsV2Response listObjectsResponse = s3Client.listObjectsV2(listObjectsRequest);
 
         List<CompletableFuture<String>> futures = listObjectsResponse.contents().stream()
