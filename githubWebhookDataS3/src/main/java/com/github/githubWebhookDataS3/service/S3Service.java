@@ -34,10 +34,10 @@ public class S3Service {
         if (fileExists) {
             // Retrieve existing content and append new event data
             String existingData = getObjectContent(bucketName, key);
-            updatedData = existingData.substring(0, existingData.length() - 1) + "," + eventData + "]";
+            updatedData = existingData.substring(0, existingData.length() - 1) + "," + eventData;
         } else {
             // Create a new array if the file doesn't exist
-            updatedData = "[" + eventData + "]";
+            updatedData = eventData;
         }
 
         // Put the updated content back into S3
