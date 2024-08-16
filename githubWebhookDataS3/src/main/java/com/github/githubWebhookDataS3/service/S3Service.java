@@ -55,7 +55,7 @@ public class S3Service {
     public String retrieveEventData(String eventType) throws Exception {
         String bucketName = "githubbucketgrafana";
         String prefix = "github-events/" + eventType + "/";
-
+//list object request
         ListObjectsV2Request listObjectsRequest = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .prefix(prefix)
