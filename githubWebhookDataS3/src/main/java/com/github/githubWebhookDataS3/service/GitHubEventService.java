@@ -29,8 +29,10 @@ public class GitHubEventService {
     @Async
     @CacheEvict(value = "githubEvents", key = "#eventType")
     public CompletableFuture<Void> processGitHubEvent(String eventType, String eventData) throws Exception {
-        logger.info("Processing event of type: {}", eventType);
-        logger.info("Processing eventData: {}", eventData);
+		/*
+		 * logger.info("Processing event of type: {}", eventType);
+		 * logger.info("Processing eventData: {}", eventData);
+		 */
 
         if (!StringUtils.hasText(eventType)) {
             logger.error("Invalid event type: {}", eventType);
