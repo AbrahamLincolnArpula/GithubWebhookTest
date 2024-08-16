@@ -108,7 +108,7 @@
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
 		</plugins>
-		<finalName>githubWebhookDataS3</finalName>
+		<finalName>githubWebhookDataS3-1</finalName>
 	</build>
 	<profiles>
 		<profile>
