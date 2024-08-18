@@ -47,7 +47,7 @@ public class S3Service {
 
         s3Client.putObject(putObjectRequest, RequestBody.fromBytes(updatedData.getBytes(StandardCharsets.UTF_8)));
     }
-
+//retrieval events based on string type
     public String retrieveEventData(String eventType) throws Exception {
         String bucketName = "githubbucketgrafana";
         String prefix = "github-events/" + eventType + "/";
