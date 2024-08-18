@@ -30,21 +30,13 @@ public class S3Service {
         String date = LocalDate.now().toString(); // Get current date in YYYY-MM-DD format
         String key = "github-events/" + eventType + "/" + date + ".json";
 
-        // Retrieve existing content if the file exists, otherwise start a new JSON array
+        // Retrieve existing content if the file exists, otherwise start new data
         String updatedData;
         if (doesObjectExist(bucketName, key)) {
             String existingData = getObjectContent(bucketName, key);
-
-            // Ensure the existing data is a valid JSON array and append new data correctly
-            if (existingData.endsWith("]")) {
-                existingData = existingData.substring(0, existingData.length() - 1); // Remove closing ]
-                updatedData = existingData + "," + eventData + "]";
-            } else {
-                throw new RuntimeException("Malformed JSON in existing S3 object.");
-            }
+            updatedData = existingData + "," + eventData;  // Append new event data with a comma
         } else {
-            // Start a new JSON array
-            updatedData = "[" + eventData + "]";
+            updatedData = eventData;  // Start with the new event data
         }
 
         // Put the updated content back into S3
@@ -73,11 +65,12 @@ public class S3Service {
                 .map(s3Object -> CompletableFuture.supplyAsync(() -> getObjectContent(bucketName, s3Object.key())))
                 .collect(Collectors.toList());
 
-        // Join all JSON arrays from different files into one
+        // Join all contents from different files into one, separated by commas
         String aggregatedData = futures.stream()
                 .map(CompletableFuture::join)
                 .collect(Collectors.joining(","));
 
+        // Enclose the aggregated data in an array and return it with the eventType as the key
         return "{\"" + eventType + "\":[" + aggregatedData + "]}";
     }
 
@@ -90,13 +83,13 @@ public class S3Service {
             return s3Client.getObjectAsBytes(getObjectRequest).asUtf8String();
         } catch (NoSuchKeyException e) {
             logger.error("Object not found: " + key, e);
-            return "[]"; // Return empty JSON array if object is not found
+            return ""; // Return empty string if object is not found
         } catch (S3Exception e) {
             logger.error("Error retrieving object from S3: " + key, e);
             throw e;
         }
     }
-//added comments for push test
+
     private boolean doesObjectExist(String bucketName, String key) {
         try {
             HeadObjectRequest headObjectRequest = HeadObjectRequest.builder()
