@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class S3Service {
 
     private final S3Client s3Client;
-    private static final Logger logger = LoggerFactory.getLogger(GitHubEventService.class);
+    private static final Logger logger = LoggerFactory.getLogger(S3Service.class);
 
     @Autowired
     public S3Service(S3Client s3Client) {
@@ -30,17 +30,21 @@ public class S3Service {
         String date = LocalDate.now().toString(); // Get current date in YYYY-MM-DD format
         String key = "github-events/" + eventType + "/" + date + ".json";
 
-        // Check if the file already exists
-        boolean fileExists = doesObjectExist(bucketName, key);
-
+        // Retrieve existing content if the file exists, otherwise start a new JSON array
         String updatedData;
-        if (fileExists) {
-            // Retrieve existing content and append new event data
+        if (doesObjectExist(bucketName, key)) {
             String existingData = getObjectContent(bucketName, key);
-            updatedData = existingData.substring(0, existingData.length() - 1) + "," + eventData;
+
+            // Ensure the existing data is a valid JSON array and append new data correctly
+            if (existingData.endsWith("]")) {
+                existingData = existingData.substring(0, existingData.length() - 1); // Remove closing ]
+                updatedData = existingData + "," + eventData + "]";
+            } else {
+                throw new RuntimeException("Malformed JSON in existing S3 object.");
+            }
         } else {
-            // Create a new array if the file doesn't exist
-            updatedData = eventData;
+            // Start a new JSON array
+            updatedData = "[" + eventData + "]";
         }
 
         // Put the updated content back into S3
@@ -51,11 +55,12 @@ public class S3Service {
 
         s3Client.putObject(putObjectRequest, RequestBody.fromBytes(updatedData.getBytes(StandardCharsets.UTF_8)));
     }
-//retrieving the data
+
     public String retrieveEventData(String eventType) throws Exception {
         String bucketName = "githubbucketgrafana";
         String prefix = "github-events/" + eventType + "/";
-//list object request
+
+        // List all objects under the event type folder
         ListObjectsV2Request listObjectsRequest = ListObjectsV2Request.builder()
                 .bucket(bucketName)
                 .prefix(prefix)
@@ -63,10 +68,12 @@ public class S3Service {
         
         ListObjectsV2Response listObjectsResponse = s3Client.listObjectsV2(listObjectsRequest);
 
+        // Retrieve content from all files asynchronously
         List<CompletableFuture<String>> futures = listObjectsResponse.contents().stream()
                 .map(s3Object -> CompletableFuture.supplyAsync(() -> getObjectContent(bucketName, s3Object.key())))
                 .collect(Collectors.toList());
 
+        // Join all JSON arrays from different files into one
         String aggregatedData = futures.stream()
                 .map(CompletableFuture::join)
                 .collect(Collectors.joining(","));
@@ -75,11 +82,19 @@ public class S3Service {
     }
 
     private String getObjectContent(String bucketName, String key) {
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(bucketName)
-                .key(key)
-                .build();
-        return s3Client.getObjectAsBytes(getObjectRequest).asUtf8String();
+        try {
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+            return s3Client.getObjectAsBytes(getObjectRequest).asUtf8String();
+        } catch (NoSuchKeyException e) {
+            logger.error("Object not found: " + key, e);
+            return "[]"; // Return empty JSON array if object is not found
+        } catch (S3Exception e) {
+            logger.error("Error retrieving object from S3: " + key, e);
+            throw e;
+        }
     }
 
     private boolean doesObjectExist(String bucketName, String key) {
